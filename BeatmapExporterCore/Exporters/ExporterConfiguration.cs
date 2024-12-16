@@ -38,6 +38,7 @@ namespace BeatmapExporterCore.Exporters
                     ExportFormat.Background => Path.Combine(basePath, "bg"),
                     ExportFormat.Replay => Path.Combine(basePath, "replay"),
                     ExportFormat.Folder => Path.Combine(basePath, "Songs"),
+                    ExportFormat.CollectionCsv => Path.Combine(basePath, "collection"),
                     _ => throw new InvalidOperationException()
                 };
             }

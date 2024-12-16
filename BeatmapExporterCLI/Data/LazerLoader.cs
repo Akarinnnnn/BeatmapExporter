@@ -81,7 +81,7 @@ namespace BeatmapExporterCLI.Data
             List<BeatmapCollection> collections = realm.All<BeatmapCollection>().ToList();
 
             // start console i/o loop
-            LazerExporter exporter = new(database, beatmaps, collections);
+            LazerExporter exporter = new(database, beatmaps, collections, realm);
             LazerExporterCLI cli = new(exporter);
             return new ExporterApp(cli);
         }

@@ -153,6 +153,30 @@ namespace BeatmapExporterCLI.Interface
             Console.WriteLine($"Exported {exported}/{replayCount} score replays from {Exporter.SelectedBeatmapCount} beatmaps to {Configuration.FullPath}");
         }
 
+        public void ExportCollections()
+        {
+            Exporter.SetupExport();
+            int exported = 0;
+            int collectionCount = Exporter.CollectionsRealm.Count;
+
+
+            Console.WriteLine($"Exporting all collections from database.");
+            foreach (var collection in Exporter.CollectionsRealm)
+            {
+                string? filename = null;
+                try
+                {
+                    filename = Exporter.ExportCollection(collection);
+                    exported++;
+                    Console.WriteLine($"Exported replay ({exported}/{collectionCount}): {filename}");
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine($"Unable to export collection {collection.Name}\nProblem details: {e}");
+                }
+            }
+            Console.WriteLine($"Exported {exported}/{collectionCount} collections to {Configuration.FullPath}");
+        }
         public void DisplaySelectedBeatmaps()
         {
             foreach (var map in Exporter.SelectedBeatmapSets)

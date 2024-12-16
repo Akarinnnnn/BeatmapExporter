@@ -107,7 +107,7 @@ namespace BeatmapExporterGUI.Exporter
             List<BeatmapCollection> collections = realm.All<BeatmapCollection>().ToList();
 
             // replace any current exporter for this ExporterApp instance with the newly loaded database
-            Lazer = new(database, beatmaps, collections);
+            Lazer = new(database, beatmaps, collections, realm);
             AddSystemMessage($"Loaded osu!lazer database: {dbFile}");
             return true;
         }

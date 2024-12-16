@@ -3,7 +3,10 @@ using BeatmapExporterCore.Exporters.Lazer.LazerDB.Schema;
 using BeatmapExporterCore.Filters;
 using BeatmapExporterCore.Utilities;
 using Nito.AsyncEx;
+using Realms;
 using System.IO.Compression;
+using System.Security.Cryptography.X509Certificates;
+using System.Text;
 using System.Text.RegularExpressions;
 
 namespace BeatmapExporterCore.Exporters.Lazer
@@ -18,6 +21,7 @@ namespace BeatmapExporterCore.Exporters.Lazer
 
     public class LazerExporter : IBeatmapExporter
     {
+        private readonly Realm realm;
         readonly LazerDatabase lazerDb;
         readonly Transcoder transcoder;
 
@@ -26,10 +30,10 @@ namespace BeatmapExporterCore.Exporters.Lazer
         /// <param name="lazerDb">The lazer database, referenced for opening files later.</param>
         /// <param name="beatmapSets">All beatmap sets loaded into memory.</param>
         /// <param name="lazerCollections">If available, all collections into memory.</param>
-        public LazerExporter(LazerDatabase lazerDb, List<BeatmapSet> beatmapSets, List<BeatmapCollection> lazerCollections)
+        public LazerExporter(LazerDatabase lazerDb, List<BeatmapSet> beatmapSets, List<BeatmapCollection> lazerCollections, Realm realm)
         {
             this.lazerDb = lazerDb;
-
+            this.realm = realm;
             AllBeatmapSets = beatmapSets
                 .Where(set => set.Beatmaps.Count > 0)
                 .OrderBy(set => set.OnlineID)
@@ -47,6 +51,7 @@ namespace BeatmapExporterCore.Exporters.Lazer
 
             var colCount = 0;
             Collections = new();
+            CollectionsRealm = realm.All<BeatmapCollection>().ToList();
             foreach (var coll in lazerCollections)
             {
                 colCount++;
@@ -59,7 +64,6 @@ namespace BeatmapExporterCore.Exporters.Lazer
 
             transcoder = new Transcoder();
         }
-
 
         /// <summary>
         /// Count of the total beatmap sets discovered.
@@ -119,6 +123,11 @@ namespace BeatmapExporterCore.Exporters.Lazer
         {
             get;
         }
+
+        /// <summary>
+        /// Collection list in realm format.
+        /// </summary>
+        public IReadOnlyList<BeatmapCollection> CollectionsRealm { get; }
 
         /// <summary>
         /// Count of all collections discovered
@@ -432,6 +441,65 @@ namespace BeatmapExporterCore.Exporters.Lazer
             using var file = lazerDb.OpenHashedFile(fileUsage.File.Hash);
             file.CopyTo(export);
         }
+
+        // maybe we want an async version
+        public string ExportCollection(BeatmapCollection collection)
+        {
+            string filename = $"{collection.Name}.collection.csv";
+            string exportPath = Path.Combine(Configuration.FullPath, filename);
+
+            var records = realm.All<Beatmap>()
+               .ToList()
+               // Realm doesn't suppout Contains currently
+               .Where(b => collection.BeatmapMD5Hashes.Contains(b.MD5Hash))
+               .Select(b => new CollectionEntry(b.BeatmapSet!.SongFolderName(),
+                           b.DifficultyName, b.StarRating, b.OnlineID, b.BeatmapSet!.OnlineID,
+                           b.Difficulty.DrainRate, b.Difficulty.CircleSize, b.Difficulty.OverallDifficulty,
+                           b.Difficulty.ApproachRate, b.Metadata.TitleUnicode, b.Metadata.Title, 
+                           b.Metadata.ArtistUnicode, b.Metadata.Artist, b.Metadata.Source, b.UserSettings.Offset));
+
+            // write csv in UTF-8, prepend BOM(U+FEFF) to make Excel work properly
+            const string header = "\ufeffbid,sid,title,sr,artist,diffname,hp,cs,od,ar,titlea,artista,source,offset";
+            File.WriteAllLines(exportPath, new string[]{ header }.Concat(records.Select(
+                r => $"{r.BeatmapID},{r.SetOnlineID},{Escape(r.Title)},{r.StarRating:G3},{Escape(r.Artist)}," +
+                $"{Escape(r.DifficultyName)},{r.HP:G2},{r.CS:G2},{r.OD:G2},{r.AR:G2},{Escape(r.TitleA)},{Escape(r.ArtistA)}" +
+                $"{Escape(r.Source)},{r.OffsetMilliSec}ms"
+            )), Encoding.UTF8);
+
+            static string Escape(string csvValue)
+            {
+                return csvValue
+                    .Replace("\\", "\\\\")
+                    .Replace("\"", "\\\"")
+                    .Replace(",", "\\,");
+            }
+
+
+            return filename;
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="BeatmapsetName"></param>
+        /// <param name="DifficultyName"></param>
+        /// <param name="StarRating"></param>
+        /// <param name="BeatmapID"></param>
+        /// <param name="SetOnlineID">Online ID of belonging beatmapset</param>
+        /// <param name="HP"></param>
+        /// <param name="CS"></param>
+        /// <param name="OD"></param>
+        /// <param name="AR"></param>
+        /// <param name="Title">Title(Unicode)</param>
+        /// <param name="TitleA">Title in Ascii</param>
+        /// <param name="Artiest">Artist(Unicode)</param>
+        /// <param name="ArtiestA">Artist in Ascii</param>
+        /// <param name="Source"></param>
+        /// <param name="OffsetMilliSec">Beatmap offset set by user, in milliseconds, positive plays audio earlier</param>
+        public record CollectionEntry(string BeatmapsetName, string DifficultyName, double StarRating,
+            int BeatmapID, int SetOnlineID, double HP, double CS, double OD, double AR,
+            string Title, string TitleA, string Artist, string ArtistA, string Source, double OffsetMilliSec);
+
 
         private readonly Regex idCollection = new("#([0-9]+)", RegexOptions.Compiled);
 
