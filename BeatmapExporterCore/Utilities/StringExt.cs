@@ -10,17 +10,22 @@
         /// <summary>
         /// Removes characters that should not be in a (Windows) file name
         /// </summary>
-        public static string RemoveFilenameCharacters(this string str) => str
-            .Replace("\"", "")
-            .Replace("*", "")
-            .Replace("<", "")
-            .Replace(">", "")
-            .Replace(":", "")
-            .Replace("/", "")
-            .Replace("\\", "")
-            .Replace("|", "")
-            .Replace("?", "")
-            .Replace("\"", "''");
+        public static string RemoveFilenameCharacters(this string str)
+        {
+            return string.Create(str.Length, str, static (span, original) =>
+            {
+                original.CopyTo(span);
+                
+                // " is ok to explorer
+                ReadOnlySpan<char> escapeChars = stackalloc[] { '\"', '*', '<', '>', ':', '/', '\\', '|', '?' };
+                int escapeIndex = -1;
+                while ((escapeIndex = span.IndexOfAny(escapeChars)) != -1)
+                {
+                    span[escapeIndex] = '_';
+                    span = span[(escapeIndex + 1)..];
+                }
+            });
+        }
 
         /// <summary>
         /// Returns an array of strings which split the original string by comma (,)

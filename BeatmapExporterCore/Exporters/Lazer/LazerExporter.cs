@@ -442,10 +442,11 @@ namespace BeatmapExporterCore.Exporters.Lazer
             file.CopyTo(export);
         }
 
+
         // maybe we want an async version
         public string ExportCollection(BeatmapCollection collection)
         {
-            string filename = $"{collection.Name}.collection.csv";
+            string filename = $"{collection.Name.RemoveFilenameCharacters()}.collection.csv";
             string exportPath = Path.Combine(Configuration.FullPath, filename);
 
             var records = realm.All<Beatmap>()
@@ -461,17 +462,16 @@ namespace BeatmapExporterCore.Exporters.Lazer
             // write csv in UTF-8, prepend BOM(U+FEFF) to make Excel work properly
             const string header = "\ufeffbid,sid,title,sr,artist,diffname,hp,cs,od,ar,titlea,artista,source,offset";
             File.WriteAllLines(exportPath, new string[]{ header }.Concat(records.Select(
-                r => $"{r.BeatmapID},{r.SetOnlineID},{Escape(r.Title)},{r.StarRating:G3},{Escape(r.Artist)}," +
-                $"{Escape(r.DifficultyName)},{r.HP:G2},{r.CS:G2},{r.OD:G2},{r.AR:G2},{Escape(r.TitleA)},{Escape(r.ArtistA)}" +
-                $"{Escape(r.Source)},{r.OffsetMilliSec}ms"
+                r => $"{r.BeatmapID},{r.SetOnlineID},\"{Escape(r.Title)}\",\"{r.StarRating:G3}\",\"{Escape(r.Artist)}\"," +
+                $"\"{Escape(r.DifficultyName)}\",{r.HP:G2},{r.CS:G2},{r.OD:G2},{r.AR:G2},\"{Escape(r.TitleA)}\",\"{Escape(r.ArtistA)}\"" +
+                $"\"{Escape(r.Source)}\",{r.OffsetMilliSec}ms"
             )), Encoding.UTF8);
 
             static string Escape(string csvValue)
             {
                 return csvValue
                     .Replace("\\", "\\\\")
-                    .Replace("\"", "\\\"")
-                    .Replace(",", "\\,");
+                    .Replace("\"", "\"\"");
             }
 
 
