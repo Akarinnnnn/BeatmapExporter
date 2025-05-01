@@ -203,7 +203,7 @@ namespace BeatmapExporterGUI.ViewModels.List
         /// <summary>
         /// User-requested input to manually open the export directory.
         /// </summary>
-        public void OpenExportDirectory() => Exporter.Lazer!.SetupExport(openDir: true);
+        public void OpenExportDirectory() => Exporter.Lazer!.SetupExport();
         #endregion
     }
 }

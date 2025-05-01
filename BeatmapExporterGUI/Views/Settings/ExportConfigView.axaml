@@ -54,15 +54,8 @@
               </Button>
 
               <Button Command="{Binding ListBeatmapsCommand}"
-                      Classes="accent"
                       Margin="5">
                 View Beatmap List
-              </Button>
-
-              <Button Command="{Binding ExportBeatmapsCommand}"
-                      Classes="accent"
-                      Margin="5"
-                      Content="{Binding ExportUnit, StringFormat=Export selected {0}}">
               </Button>
               
             </WrapPanel>
@@ -112,7 +105,17 @@
         <TextBlock>Export Path</TextBlock>
         <TextBlock Text="{Binding ExportPath}"
                    TextWrapping="Wrap" />
-        <Button Command="{Binding SelectExportPath}">Change Export Location</Button>
+        
+        <StackPanel Orientation="Horizontal"
+                    Spacing="5">
+          <Button Command="{Binding SelectExportPath}">
+            Change Export Location
+          </Button>
+          <Button Command="{Binding OpenExportDirectory}"
+                  Classes.accent="{Binding ShouldDisplayMergeOptions}">
+            Open Export Directory
+          </Button>
+        </StackPanel>
 
       </StackPanel>
 
@@ -130,6 +133,42 @@
         <TextBlock Text="{Binding CompressionDescriptor}" />
       
       </StackPanel>
+      
+      <!-- Collection Export Merge setting -->
+      <StackPanel Spacing="6"
+                  IsVisible="{Binding IsCollectionDbExport}">
+
+        <StackPanel Orientation="Horizontal"
+                    Spacing="12">
+
+          <TextBlock VerticalAlignment="Center">Merge Existing collection.db</TextBlock>
+          <CheckBox IsChecked="{Binding MergeCollectionsEnabled}" />
+          
+        </StackPanel>
+        <TextBlock Text="{Binding MergeCollectionsDescriptor}" />
+        
+      </StackPanel>
+
+      <!-- Collection Export Capitalization setting -->
+      <StackPanel Spacing="6"
+                  IsVisible="{Binding ShouldDisplayMergeOptions}">
+
+        <StackPanel Orientation="Horizontal"
+                    Spacing="12">
+
+          <TextBlock VerticalAlignment="Center">Case-Insensitive Merge</TextBlock>
+          <CheckBox IsChecked="{Binding MergeCaseInsensitive}" />
+
+        </StackPanel>
+        <TextBlock Text="{Binding MergeCaseDescriptor}" />
+
+      </StackPanel>
+
+      <Button Command="{Binding ExportBeatmapsCommand}"
+              Classes="accent"
+              FontSize="18"
+              Content="{Binding ExportUnit, StringFormat=Export filtered selection as {0}}">
+      </Button>
       
     </StackPanel>
     

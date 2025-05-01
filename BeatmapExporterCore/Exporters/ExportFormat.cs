@@ -3,6 +3,7 @@
     /// <summary>
     /// All available modes of exporting.
     /// </summary>
+    public enum ExportFormat { Beatmap, Audio, Background, Replay, Folder, CollectionDb };
     public enum ExportFormat { Beatmap, Audio, Background, Replay, Folder, CollectionCsv };
 
     public static class ExportFormatExtensions
@@ -17,6 +18,7 @@
             ExportFormat.Background => "beatmap backgrounds",
             ExportFormat.Replay => "score replays (.osr)",
             ExportFormat.Folder => "osu!stable \"Songs\" folder",
+            ExportFormat.CollectionDb => "osu!stable \"collection.db\"",
             ExportFormat.CollectionCsv => "beatmap collection spreadsheet (.csv)",
             _ => throw new NotImplementedException()
         };
@@ -32,6 +34,7 @@
             ExportFormat.Replay => "Player score replays will be exported (.osr).",
             ExportFormat.Folder => "Beatmaps will be exported as an unarchived \"Songs\" folder ready for use with osu! stable.",
             ExportFormat.CollectionCsv => "Collection will be exported as a simple spreadsheet file, to be viewed outside osu!.",
+            ExportFormat.CollectionDb => "Collections will be exported as the collection.db file used by osu! stable. Beatmap filters will still be applied.",
             _ => throw new NotImplementedException() 
         };
 

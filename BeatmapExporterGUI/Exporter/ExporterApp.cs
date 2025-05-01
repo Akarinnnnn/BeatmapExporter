@@ -90,10 +90,16 @@ namespace BeatmapExporterGUI.Exporter
             } catch (Exception e)
             {
                 AddSystemMessage($"Error opening database: {e.Message}", error: true);
-                if (e is LazerVersionException)
+                if (e is LazerVersionException version)
                 {
-                    AddSystemMessage("The osu!lazer database structure has updated since the last BeatmapExporter update.", error: true);
-                    AddSystemMessage("You can check GitHub for a new release, or file an issue there to let me know it needs updating if it's been a few days.", error: true);
+                    foreach (var message in version.Details)
+                    {
+                        AddSystemMessage(message, error: true);
+                    }
+                }
+                else
+                {
+                    AddSystemMessage("This is an abnormal error, and you may need to open a GitHub issue for further assistance.", error: true);
                 }
                 return false;
             }
@@ -150,6 +156,6 @@ namespace BeatmapExporterGUI.Exporter
         /// </summary>
         /// <param name="message">The message content</param>
         /// <param name="error">If this message represents an error. May be formatted differently for the user.</param>
-        public void AddSystemMessage(string message, bool error = false) => SystemMessages.Insert(0, new(error, message, DateTime.Now));
+        public void AddSystemMessage(string message, bool error = false) => SystemMessages.Add(new(error, message, DateTime.Now));
     }
 }

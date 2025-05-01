@@ -103,16 +103,6 @@ namespace BeatmapExporterGUI.ViewModels.Settings
         }
 
         /// <summary>
-        /// String containing the current type of file that will be exported
-        /// </summary>
-        public string ExportUnit => Config.ExportFormat.UnitName();
-
-        /// <summary>
-        /// Reference to the Export Beatmaps command functionality for this page to allow an alternate method to begin exporting.
-        /// </summary>
-        public IAsyncRelayCommand ExportBeatmapsCommand => outerViewModel.MenuRow.ExportCommand;
-
-        /// <summary>
         /// User-requested action to change the application view to the beatmap list.
         /// </summary>
         [RelayCommand]
@@ -160,6 +150,8 @@ namespace BeatmapExporterGUI.ViewModels.Settings
                 OnPropertyChanged(nameof(ExportUnit));
                 OnPropertyChanged(nameof(ExportPath));
                 OnPropertyChanged(nameof(IsBeatmapExport));
+                OnPropertyChanged(nameof(IsCollectionDbExport));
+                OnPropertyChanged(nameof(ShouldDisplayMergeOptions));
             }
         }
 
@@ -167,11 +159,6 @@ namespace BeatmapExporterGUI.ViewModels.Settings
         /// List of all supported export formats in user friendly form
         /// </summary>
         public IEnumerable<string> ExportModes { get; }
-
-        /// <summary>
-        /// If the export mode is currently set to export whole beatmaps, the default export mode.
-        /// </summary>
-        public bool IsBeatmapExport => Config.ExportFormat == ExportFormat.Beatmap;
 
         /// <summary>
         /// Descriptor string for the currently selected export format 
@@ -185,6 +172,26 @@ namespace BeatmapExporterGUI.ViewModels.Settings
         /// Reference to the current full file export directory.
         /// </summary>
         public string ExportPath => Config.FullPath;
+
+        /// <summary>
+        /// User-requested action to change the current export path. Opens an additional dialog for directory selection.
+        /// </summary>
+        public async Task SelectExportPath()
+        {
+            var selectDir = await App.Current.DialogService.SelectDirectoryAsync(ExportPath);
+            if (selectDir != null)
+            {
+                Config.ExportPath = selectDir;
+                OnPropertyChanged(nameof(ExportPath));
+            }
+        }
+
+        public void OpenExportDirectory() => Exporter.Lazer.SetupExport();
+
+        /// <summary>
+        /// If the export mode is currently set to export whole beatmaps, the default export mode.
+        /// </summary>
+        public bool IsBeatmapExport => Config.ExportFormat == ExportFormat.Beatmap;
 
         /// <summary>
         /// If beatmap export compression is currently enabled by the user.
@@ -205,17 +212,61 @@ namespace BeatmapExporterGUI.ViewModels.Settings
         public string CompressionDescriptor => CompressionEnabled ? "(slow export, smaller file sizes)" : "(fastest export, no compression)";
 
         /// <summary>
-        /// User-requested action to change the current export path. Opens an additional dialog for directory selection.
+        /// If the export mode is currently set to export a collection.db file.
         /// </summary>
-        public async Task SelectExportPath()
+        public bool IsCollectionDbExport => Config.ExportFormat == ExportFormat.CollectionDb;
+
+        /// <summary>
+        /// If collection.db export merging is currently enabled by the user.
+        /// </summary>
+        public bool MergeCollectionsEnabled
         {
-            var selectDir = await App.Current.DialogService.SelectDirectoryAsync(ExportPath);
-            if (selectDir != null)
+            get => Config.MergeCollections;
+            set
             {
-                Config.ExportPath = selectDir;
-                OnPropertyChanged(nameof(ExportPath));
+                Config.MergeCollections = value;
+                OnPropertyChanged(nameof(MergeCollectionsDescriptor));
+                OnPropertyChanged(nameof(ShouldDisplayMergeOptions));
             }
         }
+
+        /// <summary>
+        /// Description of the current <see cref="MergeCollectionsEnabled" /> setting, suitable for user display.
+        /// </summary>
+        public string MergeCollectionsDescriptor => MergeCollectionsEnabled ? "Will merge collections into existing collection.db at export location, if it is found.\nPlace collection.db in export directory before export if merge is desired." : "Will not merge collection, will instead fully overwrite any collection.db at export location.";
+
+        /// <summary>
+        /// If additional options for collection.db export should be displayed
+        /// </summary>
+        public bool ShouldDisplayMergeOptions => IsCollectionDbExport && MergeCollectionsEnabled;
+
+        /// <summary>
+        /// If collection.db export is set as case insensitive by the user.
+        /// </summary>
+        public bool MergeCaseInsensitive
+        {
+            get => Config.MergeCaseInsensitive;
+            set
+            {
+                Config.MergeCaseInsensitive = value;
+                OnPropertyChanged(nameof(MergeCaseDescriptor));
+            }
+        }
+
+        /// <summary>
+        /// Description of the current <see cref="MergeCaseInsensitive" /> setting, suitable for user display.
+        /// </summary>
+        public string MergeCaseDescriptor => MergeCaseInsensitive ? "Collections with the same name with different capitalization will be merged." : "Collections will not be merged, all collections are preserved.";
+
+        /// <summary>
+        /// String containing the current type of file that will be exported
+        /// </summary>
+        public string ExportUnit => Config.ExportFormat.UnitName();
+
+        /// <summary>
+        /// Reference to the Export Beatmaps command functionality for this page to allow an alternate method to begin exporting.
+        /// </summary>
+        public IAsyncRelayCommand ExportBeatmapsCommand => outerViewModel.MenuRow.ExportCommand;
         #endregion
     }
 }

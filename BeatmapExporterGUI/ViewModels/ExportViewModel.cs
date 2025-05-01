@@ -3,6 +3,7 @@ using BeatmapExporterCore.Exporters.Lazer;
 using BeatmapExporterCore.Exporters.Lazer.LazerDB.Schema;
 using CommunityToolkit.Mvvm.ComponentModel;
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading;
@@ -89,10 +90,17 @@ namespace BeatmapExporterGUI.ViewModels
                 ExportFormat.Background => ExportBackgrounds,
                 ExportFormat.Replay => ExportReplays,
                 ExportFormat.Folder => ExportBeatmaps,
+                ExportFormat.CollectionDb => ExportCollectionDb
             };
 
             ActiveExport = true;
-            await operation(token);
+            try
+            {
+                await operation(token);
+            } catch (Exception e)
+            {
+                AddExport(false, $"Export process cancelled due to error: {e}");
+            }
             ActiveExport = false;
         }
 
@@ -164,7 +172,9 @@ namespace BeatmapExporterGUI.ViewModels
                     Progress++;
                 });
             }
-            Description = $"Exported {exportedAudio}/{discovered} audio files from {TotalSetCount} beatmaps to {lazer.Configuration.FullPath}.";
+            var status = $"Exported {exportedAudio}/{discovered} audio files from {TotalSetCount} beatmaps to {lazer.Configuration.FullPath}.";
+            Description = status;
+            Exporter.AddSystemMessage(status);
         }
 
         /// <summary>
@@ -233,7 +243,9 @@ namespace BeatmapExporterGUI.ViewModels
                     Progress++;
                 });
             }
-            Description = $"Exported {exportedBackgrounds}/{discovered} background files from {TotalSetCount} beatmaps to {lazer.Configuration.FullPath}.";
+            var status = $"Exported {exportedBackgrounds}/{discovered} background files from {TotalSetCount} beatmaps to {lazer.Configuration.FullPath}.";
+            Description = status;
+            Exporter.AddSystemMessage(status);
         }
 
         /// <summary>
@@ -294,7 +306,35 @@ namespace BeatmapExporterGUI.ViewModels
                 }
                 Progress++;
             }
-            Description = $"Exported {exportedReplays}/{replayCount} player score replays from {TotalSetCount} beatmaps to {lazer.Configuration.FullPath}.";
+            var status = $"Exported {exportedReplays}/{replayCount} player score replays from {TotalSetCount} beatmaps to {lazer.Configuration.FullPath}.";
+            Description = status;
+            Exporter.AddSystemMessage(status);
+        }
+
+        private async Task ExportCollectionDb(CancellationToken _)
+        {
+            lazer.SetupExport();
+            // collection.db export is simpler and performs operation all at once and then reports collection merge steps
+            List<LazerExporter.CollectionMergeStep> steps;
+            try
+            {
+                steps = await Exporter.RealmScheduler.Schedule(() => lazer.ExportCollectionDb());
+            } catch (Exception e)
+            {
+                AddExport(false, $"Unable to export collection.db file :: {e.Message}");
+                return;
+            }
+
+            var included = steps.Count;
+            TotalCount = included;
+            Progress = included;
+            foreach (var step in steps)
+            {
+                AddExport(true, $"Adding \"{step.Name}\" to collection.db with {step.IncludedDiffs}/{step.OriginalDiffs} included after applying filters.");
+            }
+            var status = $"Exported collection.db file with {included} collections included.";
+            Description = status;
+            Exporter.AddSystemMessage(status);
         }
     }
 

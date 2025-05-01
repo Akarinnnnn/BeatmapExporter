@@ -39,6 +39,7 @@ namespace BeatmapExporterCore.Exporters
                     ExportFormat.Replay => Path.Combine(basePath, "replay"),
                     ExportFormat.Folder => Path.Combine(basePath, "Songs"),
                     ExportFormat.CollectionCsv => Path.Combine(basePath, "collection"),
+                    ExportFormat.CollectionDb => Path.Combine(basePath, "collection.db"),
                     _ => throw new InvalidOperationException()
                 };
             }
@@ -59,6 +60,16 @@ namespace BeatmapExporterCore.Exporters
         /// The compression level set for this exporter. 
         /// </summary>
         public CompressionLevel CompressionLevel => CompressionEnabled ? CompressionLevel.SmallestSize : CompressionLevel.NoCompression;
+
+        /// <summary>
+        /// If collection.db export should merge with an existing file, enabled by default. If false, output file will always be overwritten instead.
+        /// </summary>
+        public bool MergeCollections { get; set; } = true;
+
+        /// <summary>
+        /// If collection.db export should merge in a case-insensitive manner, merging duplicates.
+        /// </summary>
+        public bool MergeCaseInsensitive { get; set; } = true;
 
         /// <summary>
         /// The current export mode.

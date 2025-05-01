@@ -153,6 +153,24 @@ namespace BeatmapExporterCLI.Interface
             Console.WriteLine($"Exported {exported}/{replayCount} score replays from {Exporter.SelectedBeatmapCount} beatmaps to {Configuration.FullPath}");
         }
 
+        public void  ExportCollectionDb()
+        {
+            Exporter.SetupExport();
+            try
+            {
+                var steps = Exporter.ExportCollectionDb();
+                foreach (var step in steps)
+                {
+                    Console.WriteLine($"Adding \"{step.Name}\" to collectionl.db with {step.IncludedDiffs}/{step.OriginalDiffs} included after applying filters.");
+                }
+                Console.WriteLine($"Exported collection.db file with {steps.Count} collections included.");
+            } catch (Exception e)
+            {
+                Console.WriteLine($"Unable to export collection.db file :: {e.Message}");
+                return;
+            }
+        }
+
         public void ExportCollections()
         {
             Exporter.SetupExport();
@@ -168,7 +186,7 @@ namespace BeatmapExporterCLI.Interface
                 {
                     filename = Exporter.ExportCollection(collection);
                     exported++;
-                    Console.WriteLine($"Exported replay ({exported}/{collectionCount}): {filename}");
+                    Console.WriteLine($"Exported collection ({exported}/{collectionCount}): {filename}");
                 }
                 catch (Exception e)
                 {
@@ -224,11 +242,27 @@ namespace BeatmapExporterCLI.Interface
                         settings.Append(".osz compression is disabled (fastest export)");
                 }
 
+                bool exportCollectionDb = Configuration.ExportFormat == ExportFormat.CollectionDb;
+                if (exportCollectionDb)
+                {
+                    settings.Append("\n3. ");
+                    if (Configuration.MergeCollections)
+                        settings.Append("collection.db merging is enabled (merges collections into an existing collection.db at the export location)");
+                    else
+                        settings.Append("collection.db merging is disabled (does not merge, always fully overwrites any collection.db at export location)*");
+
+                    settings.Append("\n4. ");
+                    if (Configuration.MergeCaseInsensitive)
+                        settings.Append("collection.db merging is case-insensitive (collections with the same name with different capitalization are merged)");
+                    else
+                        settings.Append("collection.db merging is case-sensitive (all collections are preserved)*");
+                }
+
                 settings.Append("\n\nEdit setting # (Blank to save settings): ");
 
                 Console.Write(settings.ToString());
                 string? input = Console.ReadLine();
-                if (string.IsNullOrEmpty(input) || !int.TryParse(input, out int op) || op < 1 || op > (exportBeatmaps ? 4 : 2))
+                if (string.IsNullOrEmpty(input) || !int.TryParse(input, out int op) || op < 1 || op > (exportBeatmaps || exportCollectionDb ? 4 : 2))
                 {
                     Console.Write("\nInvalid operation selected.\n");
                     return;
@@ -253,15 +287,44 @@ namespace BeatmapExporterCLI.Interface
                         Console.WriteLine($"- CHANGED: Export location set to {Path.GetFullPath(Configuration.ExportPath)}");
                         break;
                     case 3:
-                        if (Configuration.CompressionEnabled)
+                        if (exportBeatmaps)
                         {
-                            Console.WriteLine("- CHANGED: .osz output compression has been disabled.");
-                            Configuration.CompressionEnabled = false;
+                            if (Configuration.CompressionEnabled)
+                            {
+                                Console.WriteLine("- CHANGED: .osz output compression has been disabled.");
+                                Configuration.CompressionEnabled = false;
+                            }
+                            else
+                            {
+                                Console.WriteLine("- CHANGED: .osz output compression has been enabled.");
+                                Configuration.CompressionEnabled = true;
+                            }
+                        } else if (exportCollectionDb)
+                        {
+                            if (Configuration.MergeCollections)
+                            {
+                                Console.WriteLine("- CHANGED: collection.db merging has been disabled.");
+                                Configuration.MergeCollections = false;
+                            } else
+                            {
+                                Console.WriteLine("- CHANGED: collection.db merging has been enabled.");
+                                Configuration.MergeCollections = true;
+                            }
                         }
-                        else
+                        break;
+                    case 4:
+                        if (exportCollectionDb)
                         {
-                            Console.WriteLine("- CHANGED: .osz output compression has been enabled.");
-                            Configuration.CompressionEnabled = true;
+                            if (Configuration.MergeCaseInsensitive)
+                            {
+                                Console.WriteLine("- CHANGED: collection merging is now case-sensitive.");
+                                Configuration.MergeCaseInsensitive = false;
+                            }
+                            else
+                            {
+                                Console.WriteLine("- CHANGED: collection merging is now case-insensitive.");
+                                Configuration.MergeCaseInsensitive = true;
+                            }
                         }
                         break;
                 }
